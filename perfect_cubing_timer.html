@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Perfect Cubing Timer</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to bottom right, #1e3a8a, #4f46e5);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+    h1 {
+      font-size: 2.5rem;
+      font-weight: bold;
+      margin-top: 1rem;
+    }
+    select {
+      padding: 0.5rem;
+      border-radius: 1rem;
+      font-size: 1rem;
+      margin-top: 1rem;
+    }
+    .card {
+      margin-top: 2rem;
+      padding: 2rem;
+      background: white;
+      color: black;
+      border-radius: 1rem;
+      text-align: center;
+      max-width: 600px;
+      width: 100%;
+    }
+    .scramble {
+      font-family: monospace;
+      white-space: pre-wrap;
+    }
+    .time {
+      font-size: 4rem;
+      font-weight: bold;
+      margin-top: 2rem;
+    }
+    .history {
+      margin-top: 3rem;
+      max-width: 600px;
+      width: 100%;
+    }
+    .history-item {
+      background: white;
+      color: black;
+      padding: 1rem;
+      border-radius: 1rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body>
+  <h1>Perfect Cubing Timer</h1>
+  <select id="event">
+    <option>2x2</option>
+    <option selected>3x3</option>
+    <option>4x4</option>
+    <option>5x5</option>
+    <option>6x6</option>
+    <option>7x7</option>
+    <option>Pyraminx</option>
+    <option>Skewb</option>
+    <option>Square-1</option>
+    <option>Clock</option>
+    <option>Megaminx</option>
+  </select>
+
+  <div class="card">
+    <div class="scramble" id="scramble"></div>
+    <div class="time" id="time">0.00s</div>
+    <p>Press Space to start/stop</p>
+  </div>
+
+  <div class="history">
+    <h2>Solve History</h2>
+    <div id="history"></div>
+  </div>
+
+  <script>
+    const scrambleElement = document.getElementById("scramble");
+    const timeElement = document.getElementById("time");
+    const historyElement = document.getElementById("history");
+    const eventSelect = document.getElementById("event");
+
+    let solving = false;
+    let start = null;
+    let interval = null;
+    let time = 0;
+    let scramble = "";
+    let history = JSON.parse(localStorage.getItem("history") || '{}');
+
+    function getScramble(event) {
+      const moves = ["R", "L", "U", "D", "F", "B"];
+      const modifiers = ["", "'", "2"];
+      let result = [];
+      for (let i = 0; i < 25; i++) {
+        let move = moves[Math.floor(Math.random() * moves.length)];
+        let modifier = modifiers[Math.floor(Math.random() * modifiers.length)];
+        result.push(move + modifier);
+      }
+      return result.join(" ");
+    }
+
+    function loadScramble() {
+      scramble = getScramble(eventSelect.value);
+      scrambleElement.textContent = scramble;
+    }
+
+    function updateHistoryUI() {
+      historyElement.innerHTML = "";
+      const solves = history[eventSelect.value] || [];
+      solves.slice(0, 5).forEach(solve => {
+        const item = document.createElement("div");
+        item.className = "history-item";
+        item.innerHTML = `<span>${(solve.time / 1000).toFixed(2)}s</span><span>${solve.scramble.slice(0, 30)}...</span>`;
+        historyElement.appendChild(item);
+      });
+    }
+
+    function saveSolve(newSolve) {
+      if (!history[eventSelect.value]) history[eventSelect.value] = [];
+      history[eventSelect.value].unshift(newSolve);
+      localStorage.setItem("history", JSON.stringify(history));
+      updateHistoryUI();
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "Space") {
+        e.preventDefault();
+        if (!solving) {
+          solving = true;
+          start = Date.now();
+          interval = setInterval(() => {
+            time = Date.now() - start;
+            timeElement.textContent = (time / 1000).toFixed(2) + "s";
+          }, 10);
+        } else {
+          solving = false;
+          clearInterval(interval);
+          time = Date.now() - start;
+          timeElement.textContent = (time / 1000).toFixed(2) + "s";
+          saveSolve({ time, scramble });
+          loadScramble();
+        }
+      }
+    });
+
+    eventSelect.addEventListener("change", () => {
+      loadScramble();
+      updateHistoryUI();
+    });
+
+    loadScramble();
+    updateHistoryUI();
+  </script>
+</body>
+</html>
